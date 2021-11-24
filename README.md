@@ -14,10 +14,11 @@
  - pip-21.2.3
  - Tesseract-OCR-5.0.0
  - numpy-1.21.4
+ 
  ![在这里插入图片描述](https://img-blog.csdnimg.cn/c8bd675127504b898335883ee67528d4.png?x-oss-process=image/watermark,type_ZHJvaWRzYW5zZmFsbGJhY2s,shadow_50,text_Q1NETiBATG92ZeS4tuS8iuWNoea0m-aWrw==,size_14,color_FFFFFF,t_70,g_se,x_16)
  
 ## 工程下载
-码云 github
+[码云](https://gitee.com/ikaros-521/python_opencv_LPR) [github](https://github.com/Ikaros-521/python_opencv_LPR)
  
 # 效果图
 ![在这里插入图片描述](https://img-blog.csdnimg.cn/941392c6654f4ecab32113292769ac76.png?x-oss-process=image/watermark,type_ZHJvaWRzYW5zZmFsbGJhY2s,shadow_50,text_Q1NETiBATG92ZeS4tuS8iuWNoea0m-aWrw==,size_20,color_FFFFFF,t_70,g_se,x_16)
