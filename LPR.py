@@ -3,6 +3,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import os
 import time
+import sklearn
 
 
 # import pytesseract
@@ -561,7 +562,7 @@ def ocr_pHash(char_path, letter_path):
             license_plate += chr(num + 55)
         # 清空数组
         hamming_distance_arr.clear()
-    print('车牌为：' + license_plate + '\n')
+    print('车牌为：某' + license_plate + '\n')
 
 
 # Tesseract-OCR 图像识别 传入车牌路径
@@ -573,7 +574,7 @@ def tesseract_ocr(car_img_path):
     # 给tesseract一点处理时间
     time.sleep(1)
 
-    # 打开文件
+    # 读写模式打开文件
     with open('result.txt', 'r', encoding='utf-8') as f:
         # 读取第一行
         line1 = f.readline()
@@ -595,6 +596,112 @@ def tesseract_ocr(car_img_path):
 #     img_rgb = cv2.cvtColor(img_cv, cv2.COLOR_BGR2RGB)
 #     ret = pytesseract.image_to_string(img_rgb, lang='chi_sim')
 #     print('车牌为：' + ret + '\n')
+
+
+############################机器学习识别字符##########################################
+#这部分是支持向量机的代码
+############################机器学习识别字符##########################################
+
+
+# 加载数据集 传入图片需要压缩的像素比
+def load_data(w, h):
+    """
+    这个函数用来加载数据集
+    """
+
+    middle_route = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'J', 'K',
+                    'L', 'M', 'N', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z']
+    sample_number = 0  # 用来计算总的样本数
+    # 遍历每一个字符照片，得到34*2个1 * w * h的一维数组，把它们合并成为一个68 * w * h（即68行w * h列）的数据集
+    dataArr = np.zeros((68, w * h))
+    label_list = []
+    # 循环数字+字母次
+    for i in range(0, 34):
+        with open(r'img\LPR\letter\dizhi\\' + middle_route[i] + '.txt', 'r') as fr_2:
+            temp_address = [row_1.strip() for row_1 in fr_2.readlines()]
+        # print(temp_address)
+        # sample_number += len(temp_address)
+        for j in range(len(temp_address)):
+            sample_number += 1
+            # print(middle_route[i])
+            # print(temp_address_2[j])
+            # 读入数据图片，转单通道灰度
+            temp_img = cv2.imread('img\LPR\letter\\' + middle_route[i] + '\\' + temp_address[j], cv2.IMREAD_GRAYSCALE)
+            # print('img\LPR\letter\\' + middle_route[i] + '\\' + temp_address[j])
+            # 将图片压缩到 w * h
+            temp_img2 = cv2.resize(temp_img, [w, h])
+            # cv2.imshow("temp_img2", temp_img2)
+            # cv2.waitKey(0)
+            # cv2.destroyAllWindows()
+            # 改变矩阵的通道数、行数 对矩阵元素进行序列化
+            temp_img2 = temp_img2.reshape(1, w * h)
+            dataArr[sample_number - 1, :] = temp_img2
+        label_list.extend([i] * len(temp_address))
+    # print(label_list)
+    # print(len(label_list))
+    return dataArr, np.array(label_list)
+
+
+# 保存训练好的模型
+def SVM_rocognition(dataArr, label_list):
+    # 同步注释点1
+    # 从sklearn.decomposition 导入PCA
+    # from sklearn.decomposition import PCA
+    # 初始化一个可以压缩至7个维度的PCA
+    # estimator = PCA(n_components=7)
+    # 用dataArr来训练PCA模型，同时返回降维后的数据。
+    # new_dataArr = estimator.fit_transform(dataArr)
+    # 使用默认配置初始化SVM，对降维后的训练数据进行建模，并在测试集上做出预测
+    # svc.fit(new_dataArr, label_list)
+
+    import sklearn.svm
+    svc = sklearn.svm.SVC()
+    # 使用默认配置初始化SVM，对原始315维像素特征的训练数据进行建模，并在测试集上做出预测
+    svc.fit(dataArr, label_list)
+
+    # 通过joblib的dump可以将模型保存到本地，clf是训练的分类器
+    import joblib
+    # 保存训练好的模型，通过svc = joblib.load("based_SVM_character_train_model.m")调用
+    joblib.dump(svc, "based_SVM_character_train_model.m")
+
+
+# SVM字符识别
+def SVM_rocognition_character(character_list):
+    print('\n函数SVM_rocognition_character识别结果如下：')
+    w = 20
+    h = 40
+    character_Arr = np.zeros((len(character_list), w * h))
+    # print(len(character_list))
+    for i in range(len(character_list)):
+        character_ = cv2.resize(character_list[i], (w, h), interpolation=cv2.INTER_LINEAR)
+        new_character_ = character_.reshape((1, w * h))[0]
+        character_Arr[i, :] = new_character_
+
+    # 同步注释点1
+    # 从sklearn.decomposition 导入PCA
+    # from sklearn.decomposition import PCA
+    # # 要求降维后的feature数量少于样本数
+    # # 初始化一个可以降到7个维度的PCA
+    # estimator = PCA(n_components=7)
+    # # 用character_Arr来训练PCA模型，同时返回降维后的数据 character_Arr。
+    # character_Arr = estimator.fit_transform(character_Arr)
+
+    dataArr, label_list = load_data(w, h)
+    SVM_rocognition(dataArr, label_list)
+
+    import joblib
+    clf = joblib.load("based_SVM_character_train_model.m")
+    # 返回预测结果，显示标签值
+    predict_result = clf.predict(character_Arr)
+    middle_route = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F', 'G',
+                    'H', 'J', 'K', 'L', 'M', 'N', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z']
+    print(predict_result.tolist())
+    license_plate = '车牌为：某'
+    for k in range(len(predict_result.tolist())):
+        # 跳过第一个中文的识别结果
+        if k != 0:
+            license_plate += middle_route[predict_result.tolist()[k]]
+    print('车牌为：某' + license_plate + '\n')
 
 
 if __name__ == "__main__":
@@ -632,6 +739,9 @@ if __name__ == "__main__":
 
         # 对车牌的二值图进行水平方向的切分，将字符分割出来
         character_list = split_licensePlate_character(plate_binary_img)
+
+        # SVM字符识别
+        SVM_rocognition_character(character_list)
 
         # 感知哈希算法的字符识别
         ocr_pHash('img/LPR', 'img/LPR/letter')
